@@ -459,14 +459,14 @@ def build_parser():
 
   # P-norm regularization options
   parser.add_argument('--alpha', type=float, default=6.0)
-  parser.add_argument('--p_scale', type=float, default=50)
+  parser.add_argument('--p_scale', type=float, default=1.0)
   parser.add_argument('--p_reg', type=float, default=1e-4)
 
   # TV regularization options
   parser.add_argument('--beta', type=float, default=2.0)
   parser.add_argument('--tv_reg', type=float, default=0.5)
   parser.add_argument('--tv_reg_scale', type=float, default=1.0)
-  parser.add_argument('--tv_reg_step', type=float, default=0.25)
+  parser.add_argument('--tv_reg_step', type=float, default=0.0)
   parser.add_argument('--tv_reg_step_iter', type=int, default=50)
 
   # Output options
@@ -535,8 +535,8 @@ def main(args):
             p_loss, p_grad = p_norm(img_region - init_region, p=args.alpha, scale=args.p_scale)
           else:
             p_loss, p_grad = p_norm(img_region, p=args.alpha, scale=args.p_scale)
-          tv_loss, tv_grad = tv_norm(img_region / args.tv_norm_scale, beta=args.beta, verbose=size_flag)
-          tv_grad /= args.tv_norm_scale
+          tv_loss, tv_grad = tv_norm(img_region / args.tv_reg_scale, beta=args.beta, verbose=size_flag)
+          tv_grad /= args.tv_reg_scale
           
           dimg = cnn_grad[region_idx] + args.p_reg * p_grad + tv_reg * tv_grad
 
@@ -579,66 +579,6 @@ def main(args):
           
   img_uint = img_to_uint(img, mean_img)
   imsave(args.output_file, img_uint)
-
-
-# def main(args):
-#   if args.gpu < 0:
-#     caffe.set_mode_cpu()
-#   else:
-#     caffe.set_mode_gpu()
-#     caffe.set_device(args.gpu)
-# 
-#   # Build the net; paths may have CAFFE_ROOT
-#   proto_file = os.path.expandvars(args.deploy_txt)
-#   proto_file = write_temp_deploy(proto_file, args.batch_size)
-#   caffe_model_file = os.path.expandvars(args.caffe_model)
-#   net = caffe.Net(proto_file, caffe_model_file, caffe.TEST)
-# 
-#   C, H, W = net.blobs['data'].data.shape[1:]
-#   
-#   # Initialize image
-#   mean_img = np.load(os.path.expandvars(args.mean_image))
-#   if args.initial_image is not None:
-#     img = imread(args.initial_image)
-#   else:
-#     img = np.random.randn(1, C, H, W)
-#   cache = None
-# 
-#   # Run optimization
-#   tv_reg = args.tv_reg
-#   for t in xrange(args.num_steps):
-#     regions = [(0, H, 0, W)]
-#     cnn_grad = get_cnn_grads(img, regions, net, args.target_layer,
-#                    step_type=args.image_type,
-#                    target_neuron=args.target_neuron,
-#                    L1_weight=args.amplify_l1_weight,
-#                    L2_weight=args.amplify_l2_weight,
-#                    grad_clip=args.amplify_grad_clip)    
-#     p_loss, p_grad = p_norm(img, p=args.alpha, scale=args.p_scale)
-#     tv_loss, tv_grad = tv_norm(img, beta=args.beta)
-# 
-#     dimg = cnn_grad + args.p_reg * p_grad + tv_reg * tv_grad
-# 
-#     step, cache = rmsprop(dimg, cache=cache, decay_rate=args.decay_rate)
-#     step *= args.learning_rate
-#     img += step
-# 
-#     if (t + 1) % args.tv_reg_step_iter == 0:
-#       tv_reg += args.tv_reg_step
-# 
-#     if (t + 1) % args.output_iter == 0:
-#       print 'Finished iteration %d / %d' % (t + 1, args.num_steps)
-#       print 'p_loss: ', p_loss
-#       print 'tv_loss: ', tv_loss
-#       print 'mean p_grad: ', np.abs(p_grad).mean()
-#       print 'mean tv_grad: ', np.abs(tv_grad).mean()
-#       print 'mean cnn_grad: ', np.abs(cnn_grad).mean()
-#       print 'image mean / std: ', img.mean(), img.std()
-#       print 'mean step / val: ', np.mean(np.abs(step) / np.abs(img))
-#       name, ext = os.path.splitext(args.output_file)
-#       filename = '%s_%d%s' % (name, t + 1, ext)
-#       img_uint = img_to_uint(img, mean_img)
-#       imsave(filename, img_uint)
 
 
 if __name__ == '__main__':
