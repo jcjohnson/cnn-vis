@@ -582,13 +582,14 @@ def main(args):
         tv_reg += args.tv_reg_step
 
       if (t + 1) % args.output_iter == 0:
-        for p, h in pix_history.iteritems():
-          plt.plot(h)
-        plt.show()
-
+        should_plot_pix = 'plot_pix' in args.iter_behavior
         should_show = 'show' in args.iter_behavior
         should_save = 'save' in args.iter_behavior
         should_print = args.iter_behavior
+        if should_plot_pix:
+          for p, h in pix_history.iteritems():
+            plt.plot(h)
+          plt.show()
         if should_print:
           print ('Finished iteration %d / %d for size %d / %d' % 
                 (t + 1, args.num_steps, size_idx + 1, len(size_sequence)))
@@ -608,7 +609,7 @@ def main(args):
           plt.show()
         if should_save:
           name, ext = os.path.splitext(args.output_file)
-          filename = '%s_%d%s' % (name, t + 1, ext)
+          filename = '%s_%d_%d%s' % (name, size_idx + 1, t + 1, ext)
           imsave(filename, img_uint)
           
           
