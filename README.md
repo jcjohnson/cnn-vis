@@ -43,6 +43,19 @@ echo $CAFFE_ROOT/python > .env/lib/python2.7/site-packages/caffe.pth
 # Usage
 cnn-vis is a standalone Python script; you can control its behavior by passing various command-line arguments.
 
+## CNN options
+These options control the CNN that will be used to generate images.
+* `--deploy_txt`: Path to the Caffe .prototxt file that defines the CNN model to be used. cnn-vis expects that this model's input comes from a blob named `data`. Default is the BVLC reference GoogLeNet.
+* `--caffe_model`: Path to the `.caffemodel` file giving the weights of the CNN model to be used. Default is the BVLC reference GoogLeNet.
+* `--batch_size`: The number of image patches to be computed in parallel. Larger values will take more GPU memory, but may be more efficient for larger images. Default is 1.
+* `--mean_image`: By convention, most Caffe pretrained models do not work on raw images, but instead work on the residual after subtracting some average image. This parameter gives the path to a `.npy` file giving the mean image; the default is the ImageNet mean image provided by Caffe.
+* `--gpu`: Which GPU to use for optimization. Setting this to a negative value will run the model in CPU mode.
+
+## Image options
+These options define the objective that will be optimized to generate an image
+* `--image_type`: The type of image to generate. If this is `amplify_neuron` then we will attempt to maximize a single neuron in the network, similar to [5]. If this is `amplify_layer` then this will produce images in the style of Inceptionism.
+* `--target_layer`: The name of the layer to target in the network. 
+
 # References
 [1] A. Dosovitskiy and T. Brox. "Inverting Convolutional Networks with Convolutional Networks", arXiv preprint arXiv:1506.02753 (2015).
 
