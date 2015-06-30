@@ -471,7 +471,7 @@ def build_parser():
   parser.add_argument('--p_scale', type=float, default=1.0)
   parser.add_argument('--p_reg', type=float, default=1e-4)
   
-  # Auxillary P-norm regularization options
+  # Auxiliary P-norm regularization options
   parser.add_argument('--alpha_aux', type=float, default=6.0)
   parser.add_argument('--p_scale_aux', type=float, default=1.0)
   parser.add_argument('--p_reg_aux', type=float, default=0.0)
