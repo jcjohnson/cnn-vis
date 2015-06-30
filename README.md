@@ -4,7 +4,7 @@ Inspired by Google's recent [Inceptionism](http://googleresearch.blogspot.com/20
 
 <img src="https://github.com/jcjohnson/cnn-vis/blob/master/examples/example12.png?raw=true" width=800px>
 
-CNNs have become very popular in recent years for many tasks in computer vision, but most especially for image classification. A CNN takes an image (in the form of a pixel grid) as input, and transforms the image through several **layers** of nonlinear functions. In a classification setup, the final layer encodes the contents of the image in the form of a probability distribution over a set of classes. The lower layers tend to capture low-level image features such as oriented edges or corners, while the higher layers are thought to encode more semantically meaningful features such as object parts.
+Convolutional neural networks (CNNs) have become very popular in recent years for many tasks in computer vision, but most especially for image classification. A CNN takes an image (in the form of a pixel grid) as input, and transforms the image through several **layers** of nonlinear functions. In a classification setup, the final layer encodes the contents of the image in the form of a probability distribution over a set of classes. The lower layers tend to capture low-level image features such as oriented edges or corners, while the higher layers are thought to encode more semantically meaningful features such as object parts.
 
 In order to use a CNN for a classification task, it needs to be **trained**. We initialize the weights of the network randomly, then show it many examples of images whose labels are known. Based on the errors that the network makes in classifying these known images, we gradually adjust the weights of the network so that it correctly classifies these images. Two popular datasets for training CNNs are ImageNet [4] and MIT Places [10]. ImageNet contains 1000 categories of objects, such as dogs, birds, and other animals, while MIT Places contains 205 types of scenes such as bedrooms, kitchens, and forests.
 
@@ -29,6 +29,16 @@ cnn-vis is built on top of [Caffe](http://caffe.berkeleyvision.org/), an excelle
 ```
 * Download a version of GoogLeNet pretrained on the MIT Places dataset [here](http://places.csail.mit.edu/downloadCNN.html); place it in `$CAFFE_ROOT/models/googlenet_places`.
 
+## cnn-vis
+Clone the repo, create a virtual environment, install requirements, and add the Caffe Python library to the virtualenv:
+```
+git clone https://github.com/jcjohnson/cnn-vis.git
+cd cnn-vis
+virtualenv .env
+source .env/bin/activate
+pip install -r requirements.txt
+echo $CAFFE_ROOT/python > .env/lib/python2.7/site-packages/caffe.pth
+```
 
 # Usage
 cnn-vis is a standalone Python script; you can control its behavior by passing various command-line arguments.
