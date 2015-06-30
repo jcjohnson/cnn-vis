@@ -596,6 +596,7 @@ def main(args):
           print 'p_loss: ', p_loss
           print 'tv_loss: ', tv_loss
           print 'mean p_grad: ', np.abs(args.p_reg * p_grad).mean()
+          print 'mean p_grad_aux: ', np.abs(args.p_reg_aux * p_grad_aux).mean()
           print 'mean tv_grad: ', np.abs(tv_reg * tv_grad).mean()
           print 'mean cnn_grad: ', np.abs(cnn_grad).mean()
           print 'step mean, median: ', np.abs(step).mean(), np.median(np.abs(step))
