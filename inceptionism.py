@@ -1,8 +1,10 @@
 import argparse, os, tempfile
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.misc import imresize, imsave, imread
+from scipy.ndimage.filters import gaussian_filter
 
 import caffe
 
@@ -360,7 +362,7 @@ def get_base_size(net_size, initial_image):
     return net_size[2:]
   else:
     img = imread(initial_image)
-    return img[:2]
+    return img.shape[:2]
 
 
 def get_size_sequence(base_size, initial_size, final_size, num_sizes, resize_type):
@@ -399,7 +401,7 @@ def get_size_sequence(base_size, initial_size, final_size, num_sizes, resize_typ
     return zip(heights, widths)
 
 
-def initialize_img(net_size, initial_image, initial_size, mean_img):
+def initialize_img(net_size, initial_image, initial_size, mean_img, scale, blur):
   _, C, H, W = net_size
 
   def init_size_fn(h, w):
@@ -417,10 +419,13 @@ def initialize_img(net_size, initial_image, initial_size, mean_img):
     init_h, init_w = init_img.shape[:2]
     init_h, init_w = init_size_fn(init_h, init_w)
     init_img = imresize(init_img, (init_h, init_w))
-    init_img = inc.uint_to_img(init_img, mean_img)
+    init_img = uint_to_img(init_img, mean_img)
   else:
     init_h, init_w = init_size_fn(H, W)
-    init_img = np.random.randn(1, C, init_h, init_w)
+    init_img = scale * np.random.randn(1, C, init_h, init_w)
+    init_img_uint = img_to_uint(init_img, mean_img)
+    init_img_uint_blur = gaussian_filter(init_img_uint, sigma=blur)
+    init_img = uint_to_img(init_img_uint_blur, mean_img)
 
   return init_img
 
@@ -438,6 +443,10 @@ def build_parser():
   parser.add_argument('--target_neuron', default=0, type=int)
   parser.add_argument('--initial_image', default=None)
   parser.add_argument('--gpu', type=int, default=0)
+
+  # Noise initialization options
+  parser.add_argument('--initialization_scale', type=float, default=1.0)
+  parser.add_argument('--initialization_blur', type=float, default=0.0)
 
   # Resize options
   parser.add_argument('--initial_size', default=None)
@@ -461,6 +470,11 @@ def build_parser():
   parser.add_argument('--alpha', type=float, default=6.0)
   parser.add_argument('--p_scale', type=float, default=1.0)
   parser.add_argument('--p_reg', type=float, default=1e-4)
+  
+  # Auxillary P-norm regularization options
+  parser.add_argument('--alpha_aux', type=float, default=6.0)
+  parser.add_argument('--p_scale_aux', type=float, default=1.0)
+  parser.add_argument('--p_reg_aux', type=float, default=0.0)
 
   # TV regularization options
   parser.add_argument('--beta', type=float, default=2.0)
@@ -472,6 +486,7 @@ def build_parser():
   # Output options
   parser.add_argument('--output_file', default='out.png')
   parser.add_argument('--output_iter', default=50, type=int)
+  parser.add_argument('--rescale_image', action='store_true')
   parser.add_argument('--iter_behavior', default='save+print')
   
   return parser
@@ -494,13 +509,16 @@ def main(args):
   C, H, W = net_size[1:]
 
   mean_img = np.load(os.path.expandvars(args.mean_image))
-  init_img = initialize_img(net_size, args.initial_image, args.initial_size, mean_img)
+  init_img = initialize_img(net_size, args.initial_image, args.initial_size, mean_img,
+                  args.initialization_scale,
+                  args.initialization_blur)
   img = init_img.copy()
   if args.initial_image is None:
     init_img = None
 
   # Get size sequence
   base_size = get_base_size(net_size, args.initial_image)
+  print 'base_size is %r' % (base_size,)
   size_sequence = get_size_sequence(base_size,
                                     args.initial_size,
                                     args.final_size,
@@ -512,13 +530,24 @@ def main(args):
     size_flag = False
     if size_idx > 0:
       img = resize_img(img, size, mean_img)
+      if init_img is not None:
+        raw_init = imread(args.initial_image)
+        init_img_uint = imresize(raw_init, size)
+        init_img = uint_to_img(init_img_uint, mean_img)
+
     tv_reg = args.tv_reg
     regions = get_regions((img.shape[2], img.shape[3]), (H, W), args.overlap)
     regions_even, regions_odd = regions
     regions_per_pixel = count_regions_per_pixel((img.shape[2], img.shape[3]), regions_even+regions_odd)
     pixel_learning_rates = 1.0 / regions_per_pixel
     caches = {}
+    pix_history = defaultdict(list)
+    pix = [(100, 100), (200, 200), (100, 200), (200, 100)]
     for t in xrange(args.num_steps):
+      for c in [0, 1, 2]:
+        for py, px in pix:
+          pix_history[(c, py, px)].append(img[0, c, py, px])
+
       for cur_regions in [regions_even, regions_odd]:
         if len(cur_regions) == 0: continue
         cnn_grad = get_cnn_grads(img, cur_regions, net, args.target_layer,
@@ -535,10 +564,11 @@ def main(args):
             p_loss, p_grad = p_norm(img_region - init_region, p=args.alpha, scale=args.p_scale)
           else:
             p_loss, p_grad = p_norm(img_region, p=args.alpha, scale=args.p_scale)
+          p_loss_aux, p_grad_aux = p_norm(img_region, p=args.alpha_aux, scale=args.p_scale_aux)
           tv_loss, tv_grad = tv_norm(img_region / args.tv_reg_scale, beta=args.beta, verbose=size_flag)
           tv_grad /= args.tv_reg_scale
           
-          dimg = cnn_grad[region_idx] + args.p_reg * p_grad + tv_reg * tv_grad
+          dimg = cnn_grad[region_idx] + args.p_reg * p_grad + args.p_reg_aux * p_grad_aux + tv_reg * tv_grad
 
           cache = caches.get(region, None)
           step, cache = rmsprop(dimg, cache=cache, decay_rate=args.decay_rate)
@@ -552,6 +582,10 @@ def main(args):
         tv_reg += args.tv_reg_step
 
       if (t + 1) % args.output_iter == 0:
+        for p, h in pix_history.iteritems():
+          plt.plot(h)
+        plt.show()
+
         should_show = 'show' in args.iter_behavior
         should_save = 'save' in args.iter_behavior
         should_print = args.iter_behavior
@@ -560,16 +594,17 @@ def main(args):
                 (t + 1, args.num_steps, size_idx + 1, len(size_sequence)))
           print 'p_loss: ', p_loss
           print 'tv_loss: ', tv_loss
-          print 'mean p_grad: ', np.abs(p_grad).mean()
-          print 'mean tv_grad: ', np.abs(tv_grad).mean()
+          print 'mean p_grad: ', np.abs(args.p_reg * p_grad).mean()
+          print 'mean tv_grad: ', np.abs(tv_reg * tv_grad).mean()
           print 'mean cnn_grad: ', np.abs(cnn_grad).mean()
+          print 'step mean, median: ', np.abs(step).mean(), np.median(np.abs(step))
           print 'image mean, std: ', img.mean(), img.std()
           print 'mean step / val: ', np.mean(np.abs(step) / np.abs(img_region))
-        img_uint = img_to_uint(img, mean_img)
+        img_uint = img_to_uint(img, mean_img, rescale=args.rescale_image)
         if should_show:
-          plt.imshow(img_uint)
+          plt.imshow(img_uint, interpolation='none')
           plt.axis('off')
-          plt.gcf().set_size_inches(10, 10)
+          plt.gcf().set_size_inches(15, 10)
           plt.show()
         if should_save:
           name, ext = os.path.splitext(args.output_file)
@@ -577,7 +612,7 @@ def main(args):
           imsave(filename, img_uint)
           
           
-  img_uint = img_to_uint(img, mean_img)
+  img_uint = img_to_uint(img, mean_img, rescale=args.rescale_image)
   imsave(args.output_file, img_uint)
 
 

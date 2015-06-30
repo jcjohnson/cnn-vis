@@ -1,0 +1,23 @@
+python inceptionism.py \
+  --image_type=amplify_layer \
+  --target_layer=inception_4d/pool \
+  --gpu=0 \
+  --num_steps=50 \
+  --batch_size=25 \
+  --output_iter=10 \
+  --learning_rate=1.0 \
+  --decay_rate=0.85 \
+  --alpha=2.0 \
+  --p_reg=1e1 \
+  --alpha_aux=8.0 \
+  --p_reg_aux=5e-11 \
+  --use_pixel_learning_rates \
+  --beta=2.5 \
+  --tv_reg=1e0 \
+  --overlap=120 \
+  --initial_image=initial_imgs/sky.jpg \
+  --initial_size=x0.25 \
+  --final_size=x1.0 \
+  --num_sizes=5 \
+  --iter_behavior=print \
+  --output_file=example11.png

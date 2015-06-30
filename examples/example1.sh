@@ -1,7 +1,6 @@
 python inceptionism.py \
   --image_type=amplify_layer \
   --target_layer=inception_4d/3x3_reduce \
-  --target_neuron=763 \
   --gpu=0 \
   --num_steps=100 \
   --batch_size=25 \

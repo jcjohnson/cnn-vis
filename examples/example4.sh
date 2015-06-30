@@ -1,0 +1,19 @@
+python inceptionism.py \
+  --image_type=amplify_layer \
+  --target_layer=inception_4d/3x3_reduce \
+  --gpu=0 \
+  --num_steps=200 \
+  --batch_size=10 \
+  --output_iter=25 \
+  --learning_rate=10 \
+  --decay_rate=0.25 \
+  --alpha=6.0 \
+  --p_reg=1e-11 \
+  --beta=2.5 \
+  --tv_reg=1e-2 \
+  --overlap=120 \
+  --initial_size=270x480 \
+  --final_size=1080x1920 \
+  --num_sizes=5 \
+  --iter_behavior=print \
+  --output_file=example4.png
