@@ -18,7 +18,17 @@ Inceptionism builds on this line of work, adding three unique twists:
 
 # Setup
 ## Caffe
-You will need to install [Caffe](http://caffe.berkeleyvision.org/), an excellent open-source CNN implementation from Berkeley. Follow the [installation instructions](http://caffe.berkeleyvision.org/installation.html) and make sure to install the Python bindings.
+cnn-vis is built on top of [Caffe](http://caffe.berkeleyvision.org/), an excellent open-source CNN implementation from Berkeley. You'll need to do the following:
+* Install Caffe; follow the official [installation instructions](http://caffe.berkeleyvision.org/installation.html).
+* Build the Python bindings for Caffe
+* If you have an NVIDIA GPU, you can optionally install [cuDNN](https://developer.nvidia.com/cuDNN) to make Caffe even faster
+* Set the environment variable `$CAFFE_ROOT` to point to the root directory of your Caffe installation
+* Download the official Caffe pretrained GoogLeNet model; from `$CAFFE_ROOT` run the command
+```
+./scripts/download_model_binary.py models/bvlc_googlenet/
+```
+* Download a version of GoogLeNet pretrained on the MIT Places dataset [here](http://places.csail.mit.edu/downloadCNN.html); place it in `$CAFFE_ROOT/models/googlenet_places`.
+
 
 # Usage
 cnn-vis is a standalone Python script; you can control its behavior by passing various command-line arguments.
