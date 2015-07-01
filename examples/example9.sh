@@ -1,10 +1,10 @@
 python cnn_vis.py \
   --image_type=amplify_layer \
-  --target_layer=inception_3a/3x3_reduce \
+  --target_layer=inception_4d/output \
   --gpu=0 \
   --num_steps=50 \
   --batch_size=25 \
-  --output_iter=10 \
+  --output_iter=25 \
   --learning_rate=1.0 \
   --decay_rate=0.9 \
   --alpha=2.0 \
@@ -15,5 +15,5 @@ python cnn_vis.py \
   --initial_size=x0.12 \
   --final_size=x0.25 \
   --num_sizes=3 \
-  --iter_behavior=print \
+  --iter_behavior=print+show \
   --output_file=example9.png
