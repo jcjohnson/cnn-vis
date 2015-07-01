@@ -3,7 +3,6 @@
 TODOs:
 * Make an example for amplify_neuron
 * Make an example gallery
-* Add documentation for l1_weight, l2_weight, grad_clip
 
 Inspired by Google's recent [Inceptionism](http://googleresearch.blogspot.com/2015/06/inceptionism-going-deeper-into-neural.html) blog post, cnn-vis is an open-source tool that lets you use convolutional neural networks to generate images. Here's an example:
 
@@ -86,7 +85,13 @@ We optimize using gradient descent, and use RMSProp to compute per-parameter ada
 * `--decay_rate`: Decay rate for RMSProp. Default is 0.95. Usually when RMSProp is used for stochastic gradient descent, it is common to use values greater than 0.9 for the decay rate; however in this application our gradients are not stochastic, so lower decay rate values sometimes work well.
 * `--num_steps`: The number of optimization steps to take at each size.
 * `--use_pixel_learning_rates`: Because the image is tiled with overlapping windows of input size to the CNN, each pixel will be contained in either 1, 2, or 4 windows; this can cause ugly artifacts near the borders of window regions, especially for high learning rates. If this flag is passed, divide the learning rate for each pixel by the number of windows that the pixel is contained in; this can sometimes help alleviate this problem.
- 
+
+## Layer amplification objective options
+These options allow you to configure the objective that is used for layer amplification. During backpropagation, we set the gradient of the target layer to `-l1_weight * abs(a) - l2_weight * clip(a, -g, g)`, where `a` are the activations of the target layer. This corresponds to maximizing the (weighted) sum of the absolute values and thresholded squares of the activations at the target layer. The generated image tends not to be very sensitive to the values of these parameters, so the defaults should work fine.
+* `--l1_weight`: The value of `l1_weight` in the equation above; default is 1.0.
+* `--l2_weight`: The value of `l2_weight` in the equation above; default is 1.0.
+* `--grad_clip`: The value of `g` in the equation above. Default is 5.0.
+
 ## P-norm regularization options
 P-norm regularization prevents individual pixels from getting too large. For noise initializations, p-norm regularization pulls each pixel toward zero (corresponding to the mean ImageNet color) and for image initializations, p-norm regularization will pull each pixel toward the value of that pixel in the initial image. For noise initializations, relatively weak p-norm regularization tends to work well; for image initializations, p-norm regularization is the only term enforcing visual consistency with the initial image, so p-norm regularization should be stronger.
 * `--alpha`: The exponent of the p-norm. Note that [5] uses L2 regularization, corresponding to `alpha=2.0` while [2] suggests using `alpha=6.0`. Default is 6.0.
