@@ -1,9 +1,5 @@
 # cnn-vis
 
-TODOs:
-* Make an example for amplify_neuron
-* Make an example gallery
-
 Inspired by Google's recent [Inceptionism](http://googleresearch.blogspot.com/2015/06/inceptionism-going-deeper-into-neural.html) blog post, cnn-vis is an open-source tool that lets you use convolutional neural networks to generate images. Here's an example:
 
 <img src="http://cs.stanford.edu/people/jcjohns/cnn-vis-examples/example12.png" width=800px>
@@ -86,6 +82,8 @@ Sizes may be specified as multiples of a **base size**; for noise initialization
 ## Optimization options
 We optimize using gradient descent, and use RMSProp to compute per-parameter adaptive learning rates.
 * `--learning_rate`: The learning rate to use. Default is 1.0.
+* `--learning_rate_decay_iter`: Every `learning_rate_decay_iter` iterations, reduce the learning rate. Default is 100.
+* `--learning_rate_decay_factor`: Every `learning_rate_decay_iter` iterations, reduce the learning rate by multiplying it by `learning_rate_decay_factor`. Default is 1.0, corresponding to no learning rate decay.
 * `--decay_rate`: Decay rate for RMSProp. Default is 0.95. Usually when RMSProp is used for stochastic gradient descent, it is common to use values greater than 0.9 for the decay rate; however in this application our gradients are not stochastic, so lower decay rate values sometimes work well.
 * `--num_steps`: The number of optimization steps to take at each size.
 * `--use_pixel_learning_rates`: Because the image is tiled with overlapping windows of input size to the CNN, each pixel will be contained in either 1, 2, or 4 windows; this can cause ugly artifacts near the borders of window regions, especially for high learning rates. If this flag is passed, divide the learning rate for each pixel by the number of windows that the pixel is contained in; this can sometimes help alleviate this problem.
@@ -119,6 +117,7 @@ As defined in [2], we compute the TV-norm of an image by approximating the magni
 * `--tv_reg_scale`: Similar to `p_scale`, a scaling factor that the image is divided by prior to computing the TV-norm. As with `p_scale` this is technically redudent and can be absorbed into `tv_reg`.
 * `--tv_reg_step_iter`: TV-norm regularization strength will be increased every `tv_reg_step_iter` steps. Default is 50.
 * `--tv_reg_step`: Every `tv_reg_step_iter` steps, TV-norm regularization strength will increase by this amount. Default is 0, corresponding to a fixed TV-norm regularization strength.
+* `--tv_grad_operator`: The operator used to compute image gradients for the TV-norm. Choices are `naive` (which uses neighboring pixels as in [2]), `sobel` (which uses the classic Sobel filter) or `sobel_squish` (which uses the kernels [[-1, 1, 0], [-2, 2, 0], [-1, 1, 0]] and [[-1, -2, -1], [1, 2, 1], [0, 0, 0]]). Using the Sobel operators tends to lead to high-frequency noise due to oscillatory behavior of neighboring pixels, so naive is probably the best choice for most applications. 
 
 ## Output options
 Options for controlling the output.
@@ -130,6 +129,7 @@ Options for controlling the output.
   * `save`: Save the current image; the filename will append the size number and iteration number to `output_file`.
   * `print`: Print the current iteration number, along with some statistics about the image and the gradients from the different regularizers.
   * `plot_pix`: Plot the values of a few image pixels over time using matplotlib; this can give you a rough sense for how the optimization process is proceeding. For example very oscillatory behavior indicates that something bad is happening, and the learning rate should be decreased.
+* `--show_width`, `--show_height`: Control the size of the shown image for the `show` behavior. Show the image with height and width of `show_height` and `show_width` inches, respectively.
 
 # References
 [1] A. Dosovitskiy and T. Brox. "Inverting Convolutional Networks with Convolutional Networks", arXiv preprint arXiv:1506.02753 (2015).
