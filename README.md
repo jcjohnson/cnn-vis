@@ -1,9 +1,5 @@
 # cnn-vis
 
-TODOs:
-* Make an example for amplify_neuron
-* Make an example gallery
-
 Inspired by Google's recent [Inceptionism](http://googleresearch.blogspot.com/2015/06/inceptionism-going-deeper-into-neural.html) blog post, cnn-vis is an open-source tool that lets you use convolutional neural networks to generate images. Here's an example:
 
 <img src="http://cs.stanford.edu/people/jcjohns/cnn-vis-examples/example12.png" width=800px>
