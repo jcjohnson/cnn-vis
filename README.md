@@ -4,7 +4,7 @@ Inspired by Google's recent [Inceptionism](http://googleresearch.blogspot.com/20
 
 <img src="https://github.com/jcjohnson/cnn-vis/blob/master/examples/example12.png?raw=true" width=800px>
 
-CNNs have become very popular in recent years for many tasks in computer vision, but most especially for image classification. A CNN takes an image (in the form of a pixel grid) as input, and transforms the image through several **layers** of nonlinear functions. In a classification setup, the final layer encodes the contents of the image in the form of a probability distribution over a set of classes. The lower layers tend to capture low-level image features such as oriented edges or corners, while the higher layers are thought to encode more semantically meaningful features such as object parts.
+Convolutional neural networks (CNNs) have become very popular in recent years for many tasks in computer vision, but most especially for image classification. A CNN takes an image (in the form of a pixel grid) as input, and transforms the image through several **layers** of nonlinear functions. In a classification setup, the final layer encodes the contents of the image in the form of a probability distribution over a set of classes. The lower layers tend to capture low-level image features such as oriented edges or corners, while the higher layers are thought to encode more semantically meaningful features such as object parts.
 
 In order to use a CNN for a classification task, it needs to be **trained**. We initialize the weights of the network randomly, then show it many examples of images whose labels are known. Based on the errors that the network makes in classifying these known images, we gradually adjust the weights of the network so that it correctly classifies these images. Two popular datasets for training CNNs are ImageNet [4] and MIT Places [10]. ImageNet contains 1000 categories of objects, such as dogs, birds, and other animals, while MIT Places contains 205 types of scenes such as bedrooms, kitchens, and forests.
 
@@ -29,9 +29,51 @@ cnn-vis is built on top of [Caffe](http://caffe.berkeleyvision.org/), an excelle
 ```
 * Download a version of GoogLeNet pretrained on the MIT Places dataset [here](http://places.csail.mit.edu/downloadCNN.html); place it in `$CAFFE_ROOT/models/googlenet_places`.
 
+## cnn-vis
+Clone the repo, create a virtual environment, install requirements, and add the Caffe Python library to the virtualenv:
+```
+git clone https://github.com/jcjohnson/cnn-vis.git
+cd cnn-vis
+virtualenv .env
+source .env/bin/activate
+pip install -r requirements.txt
+echo $CAFFE_ROOT/python > .env/lib/python2.7/site-packages/caffe.pth
+```
 
 # Usage
 cnn-vis is a standalone Python script; you can control its behavior by passing various command-line arguments.
+
+## CNN options
+These options control the CNN that will be used to generate images.
+* `--deploy_txt`: Path to the Caffe .prototxt file that defines the CNN model to be used. cnn-vis expects that this model's input comes from a blob named `data`. Default is the BVLC reference GoogLeNet.
+* `--caffe_model`: Path to the `.caffemodel` file giving the weights of the CNN model to be used. Default is the BVLC reference GoogLeNet.
+* `--batch_size`: The number of image patches to be computed in parallel. Larger values will take more GPU memory, but may be more efficient for larger images. Default is 1.
+* `--mean_image`: By convention, most Caffe pretrained models do not work on raw images, but instead work on the residual after subtracting some average image. This parameter gives the path to a `.npy` file giving the mean image; the default is the ImageNet mean image provided by Caffe.
+* `--gpu`: Which GPU to use for optimization. Setting this to a negative value will run the model in CPU mode.
+
+## Image options
+These options define the objective that will be optimized to generate an image
+* `--image_type`: The type of image to generate. If this is `amplify_neuron` then we will attempt to maximize a single neuron in the network, similar to [5]. If this is `amplify_layer` then this will produce images in the style of Inceptionism.
+* `--target_layer`: The name of the layer to target in the network. Earlier layers tend to encode lower level features like edges or blobs, while later layers tend to encode higher-level features like object parts. For convenience, a complete list of layers in order for GoogLeNet is given in the file `googlenet_layers.txt`.
+* `--target_neuron`: If `image_type` is `amplify_neuron`, then `target_neuron` gives the index of the neuron to amplify.
+
+## Initialization options
+Options for setting the initial image. You can either seed the initial image from an existing image, or use random noise. In the case of random noise, we generate Gaussian white noise, then smooth it using Gaussian blur to prevent TV regularization from dominating the first few steps of optimization.
+* `--initial_image:` Path to an image file to use to start optimization. If this flag is not set, then the image will be initialized from smoothed Gaussian white noise instead.
+* `--initialization_scale`: If `initial_image` is not set, then this gives the standard deviation of the Gaussian white noise used to initialize the image. Default is 1.
+* `--initialization_blur`: If `initial_image` is not set, this gives the standard deviation for the Gaussian kernel used to smooth the white noise image. Default is 0, corresponding to no smoothing.
+
+## Resize options
+Options for configuring multiscale zooming used to generate high-resolution images. To generate nice images, we want to start with a small initial size that is ideally not much bigger than the base resolution of the CNN, then gradually grow to larger images. 
+
+Sizes may be specified as multiples of a **base size**; for noise initializations the base size is the input size of the CNN, and for image initializations the base size is the original size of the initial image.
+* `--initial_size`: The initial size. Can be one of the following:
+  * If not set, then the initial size is the base size.
+  * `xF` where `F` is a floating point number, such as `x0.5`. The initial size will be a multiple of the base size.
+  * `HxW` where `H` and `W` are integers, such as `600x800`. The initial image will have height and width `H` and `W` pixels respectively.
+* `--final_size`: The final size, in the same format as `--initial_size`.
+* `--num_sizes`: The number of sizes to use. Default is 1.
+* `--resize_type`: How to space the intermediate sizes between the initial and final sizes. Choices are `geometric` or `linear`; default is `geometric`.
 
 # References
 [1] A. Dosovitskiy and T. Brox. "Inverting Convolutional Networks with Convolutional Networks", arXiv preprint arXiv:1506.02753 (2015).
