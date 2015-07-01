@@ -83,7 +83,7 @@ We optimize using gradient descent, and use RMSProp to compute per-parameter ada
 * `--use_pixel_learning_rates`: Because the image is tiled with overlapping windows of input size to the CNN, each pixel will be contained in either 1, 2, or 4 windows; this can cause ugly artifacts near the borders of window regions, especially for high learning rates. If this flag is passed, divide the learning rate for each pixel by the number of windows that the pixel is contained in; this can sometimes help alleviate this problem.
  
 ## P-norm regularization options
-P-norm regularization prevents individual pixels from getting too large. For noise initializations, p-norm regularization pulls each pixel toward zero (corresponding to the mean ImageNet color) and for image initializations, p-norm regularization will pull each pixel toward the value of that pixel in the initial image.
+P-norm regularization prevents individual pixels from getting too large. For noise initializations, p-norm regularization pulls each pixel toward zero (corresponding to the mean ImageNet color) and for image initializations, p-norm regularization will pull each pixel toward the value of that pixel in the initial image. For noise initializations, relatively weak p-norm regularization tends to work well; for image initializations, p-norm regularization is the only term enforcing visual consistency with the initial image, so p-norm regularization should be stronger.
 * `--alpha`: The exponent of the p-norm. Note that [5] uses L2 regularization, corresponding to `alpha=2.0` while [2] suggests using `alpha=6.0`. Default is 6.0.
 * `--p_reg`: Regularization constant for p-norm regularization. Larger values will cause the p-norm constraint to be enforced more strongly. Default is 1e-4.
 * `--p_scale`: Scaling constant; divide pixels by this value before computing the p-norm regularizer. Note that a non-unit value for `p_scale` can be absorbed into `p_reg`, so this is technically redudent; however it can be useful for both numeric stability and to make it easier to compare values of `p_reg` across different values of `alpha`.
@@ -93,6 +93,29 @@ Parameters for a second p-norm regularizer; however the second p-norm regularize
 * `--alpha_aux`: Exponent for auxiliary p-norm regularization. Default is 6.
 * `--p_reg_aux`: Regularization strength for auxiliary p-norm regularization. Default is 0 (no auxiliary p-norm regularizer).
 * `--p_scale_aux`: Scaling constant for auxiliary p-norm regularizer, analogous to `p_scale`.
+
+## Total Variation regularization options
+Total Variation (TV) regularization encourages neighboring pixels to have similar values. For noise initializations this regularizer is critical; without it the generated image will exhibit large amounts of high-frequency noise. For image initializations it is less critical; strong p-regularization will keep the pixels close to the initial image, and this will be sufficient to prevent high-frequency noise.
+
+As defined in [2], we compute the TV-norm of an image by approximating the magnitude of the image gradient using neighboring pixels, raising the image gradient to the power of beta, and summing over the image.
+
+[2] suggests that starting with a low TV-norm regularization strength and increasing it over time gives good results. In cnn-vis we implement this idea by increasing the TV-norm regularization strength by a constant amount after a fixed number of iterations.
+* `--beta`: Exponent for TV-regularization. As discussed in [2], values less than 1 will give rise to patches of solid color; setting beta to 2 or 2.5 tends to give good results. Default is 2.0.
+* `--tv_reg`: Regularization strength for TV-regularization. Higher values will more strongly encourage the image to have a small TV-norm.
+* `--tv_reg_scale`: Similar to `p_scale`, a scaling factor that the image is divided by prior to computing the TV-norm. As with `p_scale` this is technically redudent and can be absorbed into `tv_reg`.
+* `--tv_reg_step_iter`: TV-norm regularization strength will be increased every `tv_reg_step_iter` steps. Default is 50.
+* `--tv_reg_step`: Every `tv_reg_step_iter` steps, TV-norm regularization strength will increase by this amount. Default is 0, corresponding to a fixed TV-norm regularization strength.
+
+## Output options
+Options for controlling the output.
+`--output_file`: Filename where the final image will be saved. Default is `out.png`.
+`--rescale_image`: If this flag is given, then the image colors are rescaled to [0, 255] linearly; the minimum value of the image will be mapped to 0, and the maximum image value will map to 255. If this flag is not given, the image wil be clipped to the range [0, 255] for output. Rescaling the image values can reveal detail in highly saturated or desaturated image regions, but can lead to color distortion.
+`--output_iter`: After every `output_iter` steps of optimization, some outputs will be produced. Exactly what is produced is controlled by `iter_behavior`.
+`--iter_behavior`: What should happen every `output_iter` steps. The allowed options are shown below. Options can be combined with `+` to have multiple types of behavior; for example `show+print+save` will do all three every `output_iter` steps.
+  * `show`: Show the current image using matplotlib
+  * `save`: Save the current image; the filename will append the size number and iteration number to `output_file`.
+  * `print`: Print the current iteration number, along with some statistics about the image and the gradients from the different regularizers.
+  * `plot_pix`: Plot the values of a few image pixels over time using matplotlib; this can give you a rough sense for how the optimization process is proceeding. For example very oscillatory behavior indicates that something bad is happening, and the learning rate should be decreased.
 
 # References
 [1] A. Dosovitskiy and T. Brox. "Inverting Convolutional Networks with Convolutional Networks", arXiv preprint arXiv:1506.02753 (2015).
