@@ -14,7 +14,6 @@ python inceptionism.py \
   --use_pixel_learning_rates \
   --beta=2.5 \
   --tv_reg=5e0 \
-  --overlap=120 \
   --initial_image=initial_imgs/starry_night.jpg \
   --initial_size=x0.2 \
   --final_size=x0.5 \

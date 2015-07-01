@@ -11,7 +11,6 @@ python inceptionism.py \
   --p_reg=5e-1 \
   --beta=2.5 \
   --tv_reg=5e-2 \
-  --overlap=120 \
   --initial_image=initial_imgs/scream.jpg \
   --initial_size=x0.08 \
   --final_size=x0.15 \

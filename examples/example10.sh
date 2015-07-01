@@ -11,7 +11,6 @@ python inceptionism.py \
   --p_reg=5e0 \
   --beta=2.5 \
   --tv_reg=1e-1 \
-  --overlap=120 \
   --initial_image=initial_imgs/lake.jpg \
   --initial_size=x0.2 \
   --final_size=x0.75 \

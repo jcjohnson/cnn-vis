@@ -14,7 +14,6 @@ python inceptionism.py \
   --use_pixel_learning_rates \
   --beta=2.5 \
   --tv_reg=1e0 \
-  --overlap=120 \
   --initial_image=initial_imgs/sky.jpg \
   --initial_size=x0.25 \
   --final_size=x1.0 \

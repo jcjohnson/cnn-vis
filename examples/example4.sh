@@ -11,7 +11,6 @@ python inceptionism.py \
   --p_reg=1e-11 \
   --beta=2.5 \
   --tv_reg=1e-2 \
-  --overlap=120 \
   --initial_size=270x480 \
   --final_size=1080x1920 \
   --num_sizes=5 \

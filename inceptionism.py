@@ -304,37 +304,31 @@ def check_ranges(total_length, ranges):
   return True
 
 
-def get_best_ranges(total_length, region_length, target_overlap):
+def get_best_ranges(total_length, region_length):
+  """
+  Get the first packing that is valid.
+  """
+  max_num = 1000 # this should be enough for anyone ...
   num = 1
-  best_ranges = None
-  best_diff = None
   while True:
     ranges = get_ranges(total_length, region_length, num)
     if check_ranges(total_length, ranges):
-      overlap = 0 if len(ranges) == 1 else ranges[0][1] - ranges[1][0]
-      overlap_diff = abs(overlap - target_overlap)
-      if best_diff is None or overlap_diff < best_diff:
-        best_diff = overlap_diff
-        best_ranges = ranges
-        return best_ranges
+      return ranges
     else:
-      # If an earlier num worked but this one does not, we have found
-      # all feasible packings so break
-      if best_ranges is not None:
-        break
+      if num > max_num:
+        return None
     num = num + 1
-  return best_ranges
+  return None
 
 
-def get_regions(total_size, region_size, overlap):
+def get_regions(total_size, region_size):
   print 'total_size: ', total_size
   print 'region_size: ', region_size
-  print 'overlap: ', overlap
   H, W = total_size
   h, w = region_size
   
-  y_ranges = get_best_ranges(H, h, overlap)
-  x_ranges = get_best_ranges(W, w, overlap)
+  y_ranges = get_best_ranges(H, h)
+  x_ranges = get_best_ranges(W, w)
 
   regions_even = []
   regions_odd = []
@@ -433,18 +427,21 @@ def initialize_img(net_size, initial_image, initial_size, mean_img, scale, blur)
 def build_parser():
   parser = argparse.ArgumentParser()
   
-  # Model options
+  # CNN options
   parser.add_argument('--deploy_txt', default='$CAFFE_ROOT/models/bvlc_googlenet/deploy.prototxt')
   parser.add_argument('--caffe_model', default='$CAFFE_ROOT/models/bvlc_googlenet/bvlc_googlenet.caffemodel')
   parser.add_argument('--batch_size', default=1, type=int)
-  parser.add_argument('--target_layer', default='inception_4d/3x3_reduce')
   parser.add_argument('--mean_image', default='$CAFFE_ROOT/python/caffe/imagenet/ilsvrc_2012_mean.npy')
-  parser.add_argument('--image_type', default='amplify_layer')
-  parser.add_argument('--target_neuron', default=0, type=int)
-  parser.add_argument('--initial_image', default=None)
   parser.add_argument('--gpu', type=int, default=0)
+  
+  # Image options
+  parser.add_argument('--image_type', default='amplify_layer',
+                      choices=['amplify_layer', 'amplify_neuron'])
+  parser.add_argument('--target_layer', default='inception_4d/3x3_reduce')
+  parser.add_argument('--target_neuron', default=0, type=int)
 
-  # Noise initialization options
+  # Initialization options
+  parser.add_argument('--initial_image', default=None)
   parser.add_argument('--initialization_scale', type=float, default=1.0)
   parser.add_argument('--initialization_blur', type=float, default=0.0)
 
@@ -452,8 +449,8 @@ def build_parser():
   parser.add_argument('--initial_size', default=None)
   parser.add_argument('--final_size', default=None)
   parser.add_argument('--num_sizes', default=1, type=int)
-  parser.add_argument('--resize_type', default='geometric')
-  parser.add_argument('--overlap', default=50, type=int)
+  parser.add_argument('--resize_type', default='geometric',
+                      choices=['geometric', 'linear'])
   
   # Optimization options
   parser.add_argument('--learning_rate', type=float, default=1.0)
@@ -536,7 +533,7 @@ def main(args):
         init_img = uint_to_img(init_img_uint, mean_img)
 
     tv_reg = args.tv_reg
-    regions = get_regions((img.shape[2], img.shape[3]), (H, W), args.overlap)
+    regions = get_regions((img.shape[2], img.shape[3]), (H, W))
     regions_even, regions_odd = regions
     regions_per_pixel = count_regions_per_pixel((img.shape[2], img.shape[3]), regions_even+regions_odd)
     pixel_learning_rates = 1.0 / regions_per_pixel

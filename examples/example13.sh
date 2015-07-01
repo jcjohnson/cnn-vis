@@ -14,7 +14,6 @@ python inceptionism.py \
   --use_pixel_learning_rates \
   --beta=2.5 \
   --tv_reg=5e-1 \
-  --overlap=120 \
   --initial_image=initial_imgs/bliss.jpg \
   --initial_size=x0.25 \
   --final_size=x0.5 \
