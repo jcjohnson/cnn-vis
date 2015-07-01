@@ -15,5 +15,5 @@ python cnn_vis.py \
   --initial_size=x0.12 \
   --final_size=x0.25 \
   --num_sizes=3 \
-  --iter_behavior=print+show \
+  --iter_behavior=print \
   --output_file=example9.png
