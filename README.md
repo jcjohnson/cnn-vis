@@ -1,7 +1,6 @@
 # cnn-vis
 
 TODOs:
-* Add check to make sure initial size is bigger than CNN size
 * Make an example for amplify_neuron
 * Make an example gallery
 * Add documentation for l1_weight, l2_weight, grad_clip

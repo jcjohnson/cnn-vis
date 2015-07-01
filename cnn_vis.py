@@ -521,6 +521,9 @@ def main(args):
                                     args.final_size,
                                     args.num_sizes,
                                     args.resize_type)
+  msg = ('Initial size %r is too small; must be at least %r'
+         % (size_sequence[0], (H, W)))
+  assert size_sequence[0] >= (H, W), msg
   
   # Run optimization
   for size_idx, size in enumerate(size_sequence):
