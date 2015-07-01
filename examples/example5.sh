@@ -1,4 +1,4 @@
-python inceptionism.py \
+python cnn-vis.py \
   --deploy_txt=$CAFFE_ROOT/models/googlenet_places/deploy_places205.protxt \
   --caffe_model=$CAFFE_ROOT/models/googlenet_places/googlelet_places205_train_iter_2400000.caffemodel \
   --image_type=amplify_layer \

@@ -1,4 +1,4 @@
-python inceptionism.py \
+python cnn-vis.py \
   --image_type=amplify_layer \
   --target_layer=inception_4b/5x5_reduce \
   --gpu=0 \
