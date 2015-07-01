@@ -1,4 +1,4 @@
-python cnn-vis.py \
+python cnn_vis.py \
   --image_type=amplify_layer \
   --target_layer=inception_3a/1x1 \
   --gpu=0 \
