@@ -8,12 +8,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 import caffe
 
-"""
-
-References:
-  [1] A. Mahendran and A. Vedaldi, "Understanding Deep Image Representations by Inverting Them", CVPR 2015
-  [2] K. Simonyan and A. Vedaldi and A. Zisserman, "Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps", ICLR 2014
-"""
 
 def tv_norm(x, beta=2.0, verbose=False, operator='naive'):
   """
