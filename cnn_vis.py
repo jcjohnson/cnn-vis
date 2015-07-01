@@ -15,7 +15,7 @@ References:
   [2] K. Simonyan and A. Vedaldi and A. Zisserman, "Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps", ICLR 2014
 """
 
-def tv_norm(x, beta=2.0, verbose=False):
+def tv_norm(x, beta=2.0, verbose=False, operator='naive'):
   """
   Compute the total variation norm and its gradient.
   
@@ -34,8 +34,21 @@ def tv_norm(x, beta=2.0, verbose=False):
         with respect to the input x.
   """
   assert x.shape[0] == 1
-  x_diff = x[:, :, :-1, :-1] - x[:, :, :-1, 1:]
-  y_diff = x[:, :, :-1, :-1] - x[:, :, 1:, :-1]
+  if operator == 'naive':
+    x_diff = x[:, :, :-1, :-1] - x[:, :, :-1, 1:]
+    y_diff = x[:, :, :-1, :-1] - x[:, :, 1:, :-1]
+  elif operator == 'sobel':
+    x_diff  =  x[:, :, :-2, 2:]  + 2 * x[:, :, 1:-1, 2:]  + x[:, :, 2:, 2:]
+    x_diff -= x[:, :, :-2, :-2] + 2 * x[:, :, 1:-1, :-2] + x[:, :, 2:, :-2]
+    y_diff  =  x[:, :, 2:, :-2]  + 2 * x[:, :, 2:, 1:-1]  + x[:, :, 2:, 2:]
+    y_diff -= x[:, :, :-2, :-2] + 2 * x[:, :, :-2, 1:-1] + x[:, :, :-2, 2:]
+  elif operator == 'sobel_squish':
+    x_diff  =  x[:, :, :-2, 1:-1]  + 2 * x[:, :, 1:-1, 1:-1]  + x[:, :, 2:, 1:-1]
+    x_diff -= x[:, :, :-2, :-2] + 2 * x[:, :, 1:-1, :-2] + x[:, :, 2:, :-2]
+    y_diff  =  x[:, :, 1:-1, :-2]  + 2 * x[:, :, 1:-1, 1:-1]  + x[:, :, 1:-1, 2:]
+    y_diff -= x[:, :, :-2, :-2] + 2 * x[:, :, :-2, 1:-1] + x[:, :, :-2, 2:]
+  else:
+    assert False, 'Unrecognized operator %s' % operator
   grad_norm2 = x_diff ** 2.0 + y_diff ** 2.0
   grad_norm2[grad_norm2 < 1e-3] = 1e-3
   grad_norm_beta = grad_norm2 ** (beta / 2.0)
@@ -44,9 +57,29 @@ def tv_norm(x, beta=2.0, verbose=False):
   dx_diff = 2.0 * x_diff * dgrad_norm2
   dy_diff = 2.0 * y_diff * dgrad_norm2
   dx = np.zeros_like(x)
-  dx[:, :, :-1, :-1] += dx_diff + dy_diff
-  dx[:, :, :-1, 1:] -= dx_diff
-  dx[:, :, 1:, :-1] -= dy_diff
+  if operator == 'naive':
+    dx[:, :, :-1, :-1] += dx_diff + dy_diff
+    dx[:, :, :-1, 1:] -= dx_diff
+    dx[:, :, 1:, :-1] -= dy_diff
+  elif operator == 'sobel':
+    dx[:, :, :-2, :-2] += -dx_diff - dy_diff
+    dx[:, :, :-2, 1:-1] += -2 * dy_diff
+    dx[:, :, :-2, 2:] += dx_diff - dy_diff
+    dx[:, :, 1:-1, :-2] += -2 * dx_diff
+    dx[:, :, 1:-1, 2:] += 2 * dx_diff
+    dx[:, :, 2:, :-2] += dy_diff - dx_diff
+    dx[:, :, 2:, 1:-1] += 2 * dy_diff
+    dx[:, :, 2:, 2:] += dx_diff + dy_diff
+  elif operator == 'sobel_squish':
+    dx[:, :, :-2, :-2] += -dx_diff - dy_diff
+    dx[:, :, :-2, 1:-1] += dx_diff -2 * dy_diff
+    dx[:, :, :-2, 2:] += -dy_diff
+    dx[:, :, 1:-1, :-2] += -2 * dx_diff + dy_diff
+    dx[:, :, 1:-1, 1:-1] += 2 * dx_diff + 2 * dy_diff
+    dx[:, :, 1:-1, 2:] += dy_diff
+    dx[:, :, 2:, :-2] += -dx_diff
+    dx[:, :, 2:, 1:-1] += dx_diff
+
   
   def helper(name, x):
     num_nan = np.isnan(x).sum()
@@ -455,6 +488,8 @@ def build_parser():
   # Optimization options
   parser.add_argument('--learning_rate', type=float, default=1.0)
   parser.add_argument('--decay_rate', type=float, default=0.95)
+  parser.add_argument('--learning_rate_decay_iter', type=int, default=100)
+  parser.add_argument('--learning_rate_decay_fraction', type=float, default=1.0)
   parser.add_argument('--num_steps', type=int, default=1000)
   parser.add_argument('--use_pixel_learning_rates', action='store_true')
   
@@ -479,10 +514,14 @@ def build_parser():
   parser.add_argument('--tv_reg_scale', type=float, default=1.0)
   parser.add_argument('--tv_reg_step', type=float, default=0.0)
   parser.add_argument('--tv_reg_step_iter', type=int, default=50)
+  parser.add_argument('--tv_grad_operator', default='naive',
+                      choices=['naive', 'sobel', 'sobel_squish'])
 
   # Output options
   parser.add_argument('--output_file', default='out.png')
   parser.add_argument('--output_iter', default=50, type=int)
+  parser.add_argument('--show_width', default=5, type=int)
+  parser.add_argument('--show_height', default=5, type=int)
   parser.add_argument('--rescale_image', action='store_true')
   parser.add_argument('--iter_behavior', default='save+print')
   
@@ -536,6 +575,7 @@ def main(args):
         init_img = uint_to_img(init_img_uint, mean_img)
 
     tv_reg = args.tv_reg
+    learning_rate = args.learning_rate
     regions = get_regions((img.shape[2], img.shape[3]), (H, W))
     regions_even, regions_odd = regions
     regions_per_pixel = count_regions_per_pixel((img.shape[2], img.shape[3]), regions_even+regions_odd)
@@ -565,7 +605,8 @@ def main(args):
           else:
             p_loss, p_grad = p_norm(img_region, p=args.alpha, scale=args.p_scale)
           p_loss_aux, p_grad_aux = p_norm(img_region, p=args.alpha_aux, scale=args.p_scale_aux)
-          tv_loss, tv_grad = tv_norm(img_region / args.tv_reg_scale, beta=args.beta, verbose=size_flag)
+          tv_loss, tv_grad = tv_norm(img_region / args.tv_reg_scale, beta=args.beta,
+                                     operator=args.tv_grad_operator)
           tv_grad /= args.tv_reg_scale
           
           dimg = cnn_grad[region_idx] + args.p_reg * p_grad + args.p_reg_aux * p_grad_aux + tv_reg * tv_grad
@@ -573,7 +614,7 @@ def main(args):
           cache = caches.get(region, None)
           step, cache = rmsprop(dimg, cache=cache, decay_rate=args.decay_rate)
           caches[region] = cache
-          step *= args.learning_rate
+          step *= learning_rate
           if args.use_pixel_learning_rates:
             step *= pixel_learning_rates[y0:y1, x0:x1]
           img[:, :, y0:y1, x0:x1] += step
@@ -581,11 +622,42 @@ def main(args):
       if (t + 1) % args.tv_reg_step_iter == 0:
         tv_reg += args.tv_reg_step
 
+      if (t + 1) % args.learning_rate_decay_iter == 0:
+        learning_rate *= args.learning_rate_decay_fraction
+
       if (t + 1) % args.output_iter == 0:
         should_plot_pix = 'plot_pix' in args.iter_behavior
         should_show = 'show' in args.iter_behavior
         should_save = 'save' in args.iter_behavior
         should_print = args.iter_behavior
+
+        if False:
+          values = [img_region.flatten(),
+                    cnn_grad.flatten(),
+                    #(args.p_reg * p_grad).flatten(),
+                    #(tv_reg * tv_grad).flatten()]
+                    (args.p_reg * p_grad + tv_reg * tv_grad).flatten(),
+                    step.flatten()]
+          names = ['pixel', 'cnn grad', 'reg', 'step']
+          subplot_idx = 1
+          for i, (name_i, val_i) in enumerate(zip(names, values)):
+            for j, (name_j, val_j) in enumerate(zip(names, values)):
+              x_min = val_i.min() - 0.1 * np.abs(val_i.min())
+              x_max = val_i.max() + 0.1 * np.abs(val_i.max())
+              y_min = val_j.min() - 0.1 * np.abs(val_j.min())
+              y_max = val_j.max() + 0.1 * np.abs(val_j.max())
+              plt.subplot(len(values), len(values), subplot_idx)
+              plt.scatter(val_i, val_j)
+              plt.plot(np.linspace(x_min, x_max), np.linspace(x_min, x_max), '-k')
+              plt.plot(np.linspace(x_min, x_max), -np.linspace(x_min, x_max), '-k')
+              plt.xlim([x_min, x_max])
+              plt.ylim([y_min, y_max])
+              plt.xlabel(name_i)
+              plt.ylabel(name_j)
+              subplot_idx += 1
+          plt.gcf().set_size_inches(15, 15)
+          plt.show()
+
         if should_plot_pix:
           for p, h in pix_history.iteritems():
             plt.plot(h)
@@ -595,6 +667,10 @@ def main(args):
                 (t + 1, args.num_steps, size_idx + 1, len(size_sequence)))
           print 'p_loss: ', p_loss
           print 'tv_loss: ', tv_loss
+          if args.image_type == 'amplify_neuron':
+            target_blob = net.blobs[args.target_layer]
+            neuron_val = target_blob.data[:, args.target_neuron].mean()
+            print 'mean neuron val: ', neuron_val
           print 'mean p_grad: ', np.abs(args.p_reg * p_grad).mean()
           print 'mean p_grad_aux: ', np.abs(args.p_reg_aux * p_grad_aux).mean()
           print 'mean tv_grad: ', np.abs(tv_reg * tv_grad).mean()
@@ -606,7 +682,7 @@ def main(args):
         if should_show:
           plt.imshow(img_uint, interpolation='none')
           plt.axis('off')
-          plt.gcf().set_size_inches(15, 10)
+          plt.gcf().set_size_inches(args.show_width, args.show_height)
           plt.show()
         if should_save:
           name, ext = os.path.splitext(args.output_file)
