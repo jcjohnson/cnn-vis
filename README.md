@@ -75,6 +75,25 @@ Sizes may be specified as multiples of a **base size**; for noise initialization
 * `--num_sizes`: The number of sizes to use. Default is 1.
 * `--resize_type`: How to space the intermediate sizes between the initial and final sizes. Choices are `geometric` or `linear`; default is `geometric`.
 
+## Optimization options
+We optimize using gradient descent, and use RMSProp to compute per-parameter adaptive learning rates.
+* `--learning_rate`: The learning rate to use. Default is 1.0.
+* `--decay_rate`: Decay rate for RMSProp. Default is 0.95. Usually when RMSProp is used for stochastic gradient descent, it is common to use values greater than 0.9 for the decay rate; however in this application our gradients are not stochastic, so lower decay rate values sometimes work well.
+* `--num_steps`: The number of optimization steps to take at each size.
+* `--use_pixel_learning_rates`: Because the image is tiled with overlapping windows of input size to the CNN, each pixel will be contained in either 1, 2, or 4 windows; this can cause ugly artifacts near the borders of window regions, especially for high learning rates. If this flag is passed, divide the learning rate for each pixel by the number of windows that the pixel is contained in; this can sometimes help alleviate this problem.
+ 
+## P-norm regularization options
+P-norm regularization prevents individual pixels from getting too large. For noise initializations, p-norm regularization pulls each pixel toward zero (corresponding to the mean ImageNet color) and for image initializations, p-norm regularization will pull each pixel toward the value of that pixel in the initial image.
+* `--alpha`: The exponent of the p-norm. Note that [5] uses L2 regularization, corresponding to `alpha=2.0` while [2] suggests using `alpha=6.0`. Default is 6.0.
+* `--p_reg`: Regularization constant for p-norm regularization. Larger values will cause the p-norm constraint to be enforced more strongly. Default is 1e-4.
+* `--p_scale`: Scaling constant; divide pixels by this value before computing the p-norm regularizer. Note that a non-unit value for `p_scale` can be absorbed into `p_reg`, so this is technically redudent; however it can be useful for both numeric stability and to make it easier to compare values of `p_reg` across different values of `alpha`.
+
+## Auxiliary p-norm regularization options
+Parameters for a second p-norm regularizer; however the second p-norm regularizer always pulls towards zero, while the first p-norm regularizer pulls toward the initial image if it is given. If the initial image contains very saturated regions (either very white or very black) then even small deviations around the initial value can result in pixel values outside the [0, 255] range. A trick for getting around this problem is adding a second p-norm regularizer with a high exponent (maybe 11) and very low regularization constant (maybe 1e-11). This regularizer will have little effect on pixels near the center of the [0, 255] range, but will push pixels outside this range back toward zero.
+* `--alpha_aux`: Exponent for auxiliary p-norm regularization. Default is 6.
+* `--p_reg_aux`: Regularization strength for auxiliary p-norm regularization. Default is 0 (no auxiliary p-norm regularizer).
+* `--p_scale_aux`: Scaling constant for auxiliary p-norm regularizer, analogous to `p_scale`.
+
 # References
 [1] A. Dosovitskiy and T. Brox. "Inverting Convolutional Networks with Convolutional Networks", arXiv preprint arXiv:1506.02753 (2015).
 
